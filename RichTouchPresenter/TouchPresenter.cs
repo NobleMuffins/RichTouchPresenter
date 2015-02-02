@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using Cirrious.MvvmCross.Touch.Views.Presenters;
 using Cirrious.MvvmCross.Touch.Platform;
 using UIKit;
 using Cirrious.MvvmCross.Touch.Views;
 using System.Collections.Generic;
+using Cirrious.MvvmCross.ViewModels;
 
 namespace NobleMuffins.RichTouchPresenter
 {
@@ -15,45 +17,49 @@ namespace NobleMuffins.RichTouchPresenter
 		}
 
 		private readonly ICollection<IPresentationHost> presentationHosts = new HashSet<IPresentationHost>();
-		private readonly IDictionary<object,Action> removalAgentsByViewModel = new Dictionary<object,Action>();
+		private readonly IDictionary<IMvxTouchView,Action> removalAgentsByView = new Dictionary<IMvxTouchView,Action>();
 
-		public override void Show (Cirrious.MvvmCross.Touch.Views.IMvxTouchView view)
+		public override void Show (IMvxTouchView view)
 		{
 			if (view is IPresentationHost) {
 				presentationHosts.Add ((IPresentationHost) view);
 			}
 
-			bool presentedByHost = false;
+			var potentialHosts = from host in presentationHosts
+					where host.ShouldPresentViewController (view)
+				select host;
 
-			foreach (var host in presentationHosts) {
-				var doThisOne = host.ShouldPresentViewController (view);
-				if (doThisOne) {
-					Action dismissalAgent = null;
-					host.PresentViewController (view, out dismissalAgent);
-					if (dismissalAgent == null) {
-						throw new NullReferenceException ("IPresentationHost.PresentViewController must yield a dismissal agent if .ShouldPresentViewController yields true.");
-					}
-					removalAgentsByViewModel [view.ViewModel] = dismissalAgent;
-					presentedByHost = true;
+			if (potentialHosts.Count () > 0) {
+				var host = potentialHosts.First ();
+				Action dismissalAgent = null;
+				host.PresentViewController (view, out dismissalAgent);
+				if (dismissalAgent == null) {
+					throw new NullReferenceException ("IPresentationHost.PresentViewController must yield a dismissal agent if .ShouldPresentViewController yields true.");
 				}
-				if (presentedByHost) {
-					break;
-				}
-			}
-
-			if (!presentedByHost) {
+				removalAgentsByView [view] = dismissalAgent;
+			} else {
 				base.Show (view);
 			}
 		}
 
-		public override void Close (Cirrious.MvvmCross.ViewModels.IMvxViewModel toClose)
+		public override void Close (IMvxViewModel toClose)
 		{
-			if (toClose is IPresentationHost && presentationHosts.Contains ((IPresentationHost) toClose)) {
-				presentationHosts.Remove ((IPresentationHost) toClose);
+			var presentationHostsToDrop = from host in presentationHosts
+					where ((IMvxTouchView)host).ViewModel == toClose
+				select host;
+			foreach (var host in presentationHostsToDrop) {
+				presentationHosts.Remove (host);
 			}
-			if (removalAgentsByViewModel.ContainsKey (toClose)) {
-				removalAgentsByViewModel [toClose] ();
-				removalAgentsByViewModel.Remove (toClose);
+			var viewsPresentedByHosts = removalAgentsByView.Keys;
+			var relevantViewsPresentedByHosts = (from view in viewsPresentedByHosts
+				where view.ViewModel == toClose
+				select view).ToArray();
+			if (relevantViewsPresentedByHosts.Count () > 0) {
+				foreach (var view in relevantViewsPresentedByHosts) {
+					var removalAgent = removalAgentsByView [view];
+					removalAgent ();
+					removalAgentsByView.Remove (view);
+				}
 			} else {
 				base.Close (toClose);
 			}
