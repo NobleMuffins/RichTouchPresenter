@@ -44,9 +44,10 @@ namespace NobleMuffins.RichTouchPresenter
 
 		public override void Close (IMvxViewModel toClose)
 		{
-			var presentationHostsToDrop = from host in presentationHosts
+			//We make an array of this to make a snapshot before modifying presentation hosts.
+			var presentationHostsToDrop = (from host in presentationHosts
 					where ((IMvxTouchView)host).ViewModel == toClose
-				select host;
+				select host).ToArray();
 			foreach (var host in presentationHostsToDrop) {
 				presentationHosts.Remove (host);
 			}
