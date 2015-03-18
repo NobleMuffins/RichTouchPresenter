@@ -6,12 +6,14 @@ using UIKit;
 using Cirrious.MvvmCross.Touch.Views;
 using System.Collections.Generic;
 using Cirrious.MvvmCross.ViewModels;
+using Cirrious.CrossCore.Platform;
+using Cirrious.MvvmCross.Views;
 
 namespace NobleMuffins.RichTouchPresenter
 {
-	public class TouchPresenter: MvxTouchViewPresenter
+	public class RichTouchPresenter: MvxTouchViewPresenter
 	{
-		public TouchPresenter (MvxApplicationDelegate appDelegate, UIWindow window)
+		public RichTouchPresenter (MvxApplicationDelegate appDelegate, UIWindow window)
 			: base(appDelegate, window)
 		{
 		}
@@ -20,7 +22,7 @@ namespace NobleMuffins.RichTouchPresenter
 		private readonly IDictionary<IMvxTouchView,Action> removalAgentsByView = new Dictionary<IMvxTouchView,Action>();
 
 		public override void Show (IMvxTouchView view)
-		{
+		{			
 			if (view is IPresentationHost) {
 				presentationHosts.Add ((IPresentationHost) view);
 			}
@@ -61,10 +63,34 @@ namespace NobleMuffins.RichTouchPresenter
 					removalAgent ();
 					removalAgentsByView.Remove (view);
 				}
+			} else if (MasterNavigationController != null) {
+				var topView = MasterNavigationController.TopViewController as IMvxView;
+				IMvxViewModel topViewModel;
+
+				if (topView != null) {
+					topViewModel = topView.ReflectionGetViewModel ();
+				} else {
+					MvxTrace.Warning ("Don't know how to close this ViewModel; topmost is not a touchview");
+					return;
+				}
+
+				if (topViewModel == toClose) {
+					if (MasterNavigationController.ViewControllers.Length > 1) {
+						MasterNavigationController.PopViewController (true);
+					} else {
+						MasterNavigationController.RemoveFromParentViewController ();
+						MasterNavigationController.View.RemoveFromSuperview ();
+						MasterNavigationController = null;
+					}
+				} else {
+					MvxTrace.Warning ("Don't know how to close this ViewModel; topmost view does not present this viewmodel");
+					return;
+				}
 			} else {
-				base.Close (toClose);
+				MvxTrace.Warning("Don't know how to close this ViewModel; there are no views governed by the RichTouchPresenter or its MasterNavigationController");
 			}
 		}
+
 	}
 }
 
