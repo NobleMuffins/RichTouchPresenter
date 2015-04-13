@@ -70,7 +70,9 @@ namespace NobleMuffins.RichTouchPresenter
 				if (topView != null) {
 					topViewModel = topView.ReflectionGetViewModel ();
 				} else {
-					MvxTrace.Warning ("Don't know how to close this ViewModel; topmost is not a touchview");
+//					#if DEBUG
+//					MvxTrace.Warning ("Don't know how to close this ViewModel; topmost is not a touchview");
+//					#endif
 					return;
 				}
 
@@ -83,11 +85,15 @@ namespace NobleMuffins.RichTouchPresenter
 						MasterNavigationController = null;
 					}
 				} else {
-					MvxTrace.Warning ("Don't know how to close this ViewModel; topmost view does not present this viewmodel");
+//					#if DEBUG
+//					MvxTrace.Warning ("Don't know how to close this ViewModel; topmost view does not present this viewmodel");
+//					#endif
 					return;
 				}
-			} else {
-				MvxTrace.Warning("Don't know how to close this ViewModel; there are no views governed by the RichTouchPresenter or its MasterNavigationController");
+					} else {
+//					#if DEBUG
+//					MvxTrace.Warning("Don't know how to close this ViewModel; there are no views governed by the RichTouchPresenter or its MasterNavigationController");
+//					#endif
 			}
 		}
 
