@@ -80,6 +80,7 @@ namespace NobleMuffins.RichTouchPresenter
 					if (MasterNavigationController.ViewControllers.Length > 1) {
 						MasterNavigationController.PopViewController (true);
 					} else {
+						MasterNavigationController.WillMoveToParentViewController (null);
 						MasterNavigationController.RemoveFromParentViewController ();
 						MasterNavigationController.View.RemoveFromSuperview ();
 						MasterNavigationController = null;
